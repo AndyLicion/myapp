@@ -2,8 +2,7 @@ class AcGameMenu {
     constructor(root) {
         this.root = root; // 总的AcGame对象
         // 一般习惯html对象是加上$
-        this.$menu = $(
-`
+        this.$menu = $(`
 <div class="ac-game-menu">
     <div class="ac-game-menu-field">
         <div class="ac-game-menu-field-item ac-game-menu-field-item-single-mode">
@@ -15,12 +14,12 @@ class AcGameMenu {
         </div>
         <br>
         <div class="ac-game-menu-field-item ac-game-menu-field-item-settings">
-            设置
+            退出
         </div>
     </div>
 </div>
-`
-        );
+`);
+        this.$menu.hide();
         this.root.$ac_game.append(this.$menu);
         this.$single_mode = this.$menu.find('.ac-game-menu-field-item-single-mode');
         this.$multi_mode = this.$menu.find('.ac-game-menu-field-item-multi-mode');
@@ -45,8 +44,9 @@ class AcGameMenu {
             console.log("click multi_mode");
         });
 
-        this.$settings.click(function() {
+        this.$settings.click(function() { // 先作为退出按钮使用
             console.log("click settings");
+            outer.root.settings.logout_on_remote();
         });
     }
 
