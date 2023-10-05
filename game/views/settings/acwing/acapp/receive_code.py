@@ -11,12 +11,22 @@ import requests
 def receive_code(request):
     # 接收acwing回传的授权码和授权状态
     data = request.GET
+
+    if "errcode" in data:
+        return JsonResponse({
+            'result': "apply code failed!",
+            'errcode': data['errcode'],
+            'errmsg': data['errmsg']
+        })
+
     code = data.get("code")
     state = data.get("state")
 
     # 如果当前授权状态state不一致
     if not cache.has_key(state):
-        return redirect("index")
+        return JsonResponse({
+            'result': "state not exist"
+        })
     cache.delete(state)
 
     # 请求access_token和openid
@@ -32,10 +42,14 @@ def receive_code(request):
     access_token = access_token_res.get("access_token")
     openid = access_token_res.get("openid");
 
-    player = Player.objects.filter(openid=openid)
-    if player.exists(): # 该用户已存在，则无需重新获取信息，直接登录即可
-        login(request, player[0].user)
-        return redirect("index")
+    players = Player.objects.filter(openid=openid)
+    if players.exists(): # 该用户已存在，则无需重新获取信息，直接登录即可
+        player = players[0]
+        return JsonResponse({
+            'result': "success",
+            'username': player.user.username,
+            'photo': player.photo
+        })
 
     get_userinfo_url = "https://www.acwing.com/third_party/api/meta/identity/getinfo/"
     params = {
@@ -56,6 +70,8 @@ def receive_code(request):
     user = User.objects.create(username=username)
     player = Player.objects.create(user=user, photo=photo, openid=openid)
 
-    login(request, user)
-
-    return redirect("index")
+    return JsonResponse({
+        'result': "success",
+        'username': player.user.username,
+        'photo': player.photo
+    })
