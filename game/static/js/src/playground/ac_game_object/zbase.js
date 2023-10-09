@@ -6,6 +6,19 @@ class AcGameObject {
 
         this.has_called_start = false; // 是否执行过start函数
         this.timedelta = 0; // 当前帧距离上一帧的时间间隔
+
+        this.uuid = this.create_uuid();
+
+    }
+
+    create_uuid() { // 创建唯一id
+        let res = "";
+        for (let i = 0; i < 8; i ++ ) {
+            let c = parseInt(Math.floor(Math.random() * 10));
+            res += c
+        }
+
+        return res;
     }
 
     start() { // 只会在第一帧执行一次
@@ -20,7 +33,6 @@ class AcGameObject {
 
     destroy() { // 销毁物体
         this.on_destroy();
-
         for (let i = 0; i < AC_GAME_OBJECTS.length; i ++ ) {
             if (AC_GAME_OBJECTS[i] === this) {
                 AC_GAME_OBJECTS.splice(i, 1);
