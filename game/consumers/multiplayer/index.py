@@ -30,7 +30,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
         if not cache.has_key(self.room_name):
             cache.set(self.room_name, [], 3600) # 创建房间有效期1小时
 
-        for player in cache.get(self.room_name): # 发送创建该玩家消息
+        for player in cache.get(self.room_name): # 本地创建玩家之前先将服务器中已经存在的玩家信息载入到本地窗口
             await self.send(text_data=json.dumps({
                 'event': "create_player",
                 'uuid': player['uuid'],
@@ -118,6 +118,18 @@ class MultiPlayer(AsyncWebsocketConsumer):
         )
 
 
+    async def message(self, data):
+        await self.channel_layer.group_send(
+                self.room_name,
+                {
+                    'type': "group_send_event",
+                    'event': "message",
+                    'uuid': data['uuid'],
+                    'username': data['username'],
+                    'text': data['text'],
+                }
+        )
+
     async def group_send_event(self, data): # 通知除本窗口以外所有窗口玩家在其游戏窗口显示玩家的控制的结果
         await self.send(text_data=json.dumps(data))
 
@@ -134,4 +146,6 @@ class MultiPlayer(AsyncWebsocketConsumer):
         elif event == "attack":
             await self.attack(data)
         elif event == "blink":
-            await self.blink(data);
+            await self.blink(data)
+        elif event == "message":
+            await self.message(data)
