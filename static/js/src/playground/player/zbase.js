@@ -114,7 +114,6 @@ class Player extends AcGameObject {
             if (e.which === 13) { // Enter
                 if (outer.playground.mode === "multi mode") { // 再多人模式下打开聊天框
                     outer.playground.chat_field.show_input();
-                    outer.playground.chat_field.show_history();
                     return false;
                 }
             } else if (e.which === 27) { // Esc
