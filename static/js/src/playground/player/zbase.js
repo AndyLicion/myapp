@@ -101,7 +101,7 @@ class Player extends AcGameObject {
 
                     outer.blink(tx, ty);
 
-                    if (outer.cur_skill === "blink") {
+                    if (outer.playground.mode === "multi mode") {
                         outer.playground.mps.send_blink(tx, ty);
                     }
                 }
@@ -231,12 +231,19 @@ class Player extends AcGameObject {
 
     update() {
         this.spent_time += this.timedelta / 1000;
-
+        this.update_win();
         if (this.character === "me" && this.playground.state === "fighting") {
             this.update_coldtime();
         }
         this.update_move();
         this.render();
+    }
+
+    update_win() {
+        if (this.playground.state === "fighting" && this.playground.players.length === 1 && this.character === "me") {
+            this.playground.state === "over";
+            this.playground.score_board.win();
+        }
     }
 
     update_coldtime() {
@@ -349,8 +356,9 @@ class Player extends AcGameObject {
 
 
     on_destroy() {
-        if (this.character === "me") {
+        if (this.character === "me" && this.playground.state === "fighting") {
             this.playground.state = "over"; // 标定死亡结束状态
+            this.playground.score_board.lose();
         }
 
         for (let i = 0; i < this.playground.players.length; i ++ ) {

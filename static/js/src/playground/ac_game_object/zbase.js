@@ -27,6 +27,8 @@ class AcGameObject {
     update() { // 每一帧都会执行一次
     }
 
+    last_update() { // 一帧的最后执行一次
+    }
 
     on_destroy() { // 在销毁之前会执行一次
     }
@@ -55,6 +57,11 @@ let AC_GAME_ANIMATION = function(timestamp) {
         }
     }
     last_timestamp = timestamp;
+
+    for (let i = 0; i < AC_GAME_OBJECTS.length; i ++ ) {
+        let obj = AC_GAME_OBJECTS[i];
+        obj.last_update();
+    }
 
     requestAnimationFrame(AC_GAME_ANIMATION);
 }

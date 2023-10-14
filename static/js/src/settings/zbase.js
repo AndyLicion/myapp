@@ -264,7 +264,6 @@ class Settings {
             url: "https://app6051.acapp.acwing.com.cn/settings/acwing/acapp/apply_code",
             type: "GET",
             success: function(resp) {
-                console.log("called getinfo_acapp() function");
                 if (resp.result === "success") {
                     outer.acwing_login_acapp(resp.appid, resp.redirect_uri, resp.scope, resp.state);
                 }
@@ -283,7 +282,6 @@ class Settings {
             },
             success: function(resp) {
                 if (resp.result === "success") {
-                    console.log("called getinfo_web() function");
                     outer.username = resp.username;
                     outer.photo = resp.photo;
                     outer.hide();

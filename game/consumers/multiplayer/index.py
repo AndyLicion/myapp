@@ -21,6 +21,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if self.room_name:
             await self.channel_layer.group_discard(self.room_name, self.channel_name)
+            print('disconnect')
 
 
     async def create_player(self, data):

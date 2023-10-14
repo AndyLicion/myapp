@@ -35,19 +35,16 @@ class AcGameMenu {
     add_listening_events() {
         let outer = this;
         this.$single_mode.click(function() {
-            console.log("click single_mode");
             outer.hide();
             outer.root.playground.show("single mode");
         });
 
         this.$multi_mode.click(function() {
-            console.log("click multi_mode");
             outer.hide();
             outer.root.playground.show("multi mode");
         });
 
         this.$settings.click(function() { // 先作为退出按钮使用
-            console.log("click settings");
             outer.root.settings.logout_on_remote();
         });
     }
@@ -90,6 +87,8 @@ class AcGameObject {
     update() { // 每一帧都会执行一次
     }
 
+    last_update() { // 一帧的最后执行一次
+    }
 
     on_destroy() { // 在销毁之前会执行一次
     }
@@ -118,6 +117,11 @@ let AC_GAME_ANIMATION = function(timestamp) {
         }
     }
     last_timestamp = timestamp;
+
+    for (let i = 0; i < AC_GAME_OBJECTS.length; i ++ ) {
+        let obj = AC_GAME_OBJECTS[i];
+        obj.last_update();
+    }
 
     requestAnimationFrame(AC_GAME_ANIMATION);
 }
@@ -411,7 +415,7 @@ class Player extends AcGameObject {
 
                     outer.blink(tx, ty);
 
-                    if (outer.cur_skill === "blink") {
+                    if (outer.playground.mode === "multi mode") {
                         outer.playground.mps.send_blink(tx, ty);
                     }
                 }
@@ -541,12 +545,19 @@ class Player extends AcGameObject {
 
     update() {
         this.spent_time += this.timedelta / 1000;
-
+        this.update_win();
         if (this.character === "me" && this.playground.state === "fighting") {
             this.update_coldtime();
         }
         this.update_move();
         this.render();
+    }
+
+    update_win() {
+        if (this.playground.state === "fighting" && this.playground.players.length === 1 && this.character === "me") {
+            this.playground.state === "over";
+            this.playground.score_board.win();
+        }
     }
 
     update_coldtime() {
@@ -659,8 +670,9 @@ class Player extends AcGameObject {
 
 
     on_destroy() {
-        if (this.character === "me") {
+        if (this.character === "me" && this.playground.state === "fighting") {
             this.playground.state = "over"; // 标定死亡结束状态
+            this.playground.score_board.lose();
         }
 
         for (let i = 0; i < this.playground.players.length; i ++ ) {
@@ -668,6 +680,69 @@ class Player extends AcGameObject {
                 this.playground.players.splice(i, 1);
                 break;
             }
+        }
+    }
+}
+class ScoreBoard extends AcGameObject {
+    constructor(playground) {
+        super();
+        this.playground = playground;
+        this.ctx = this.playground.game_map.ctx;
+        this.$canvas = this.playground.game_map.$canvas;
+
+
+        this.game_state = null; // 对局状态 win：胜利，lose：失败
+
+        this.win_img = new Image();
+        this.win_img.src = "https://cdn.acwing.com/media/article/image/2021/12/17/1_8f58341a5e-win.png";
+
+        this.lose_img = new Image();
+        this.lose_img.src = "https://cdn.acwing.com/media/article/image/2021/12/17/1_9254b5f95e-lose.png";
+    }
+
+
+    start() {
+    }
+
+    add_listening_events() {
+        let outer = this;
+
+        this.$canvas.on('click', function() {
+            outer.playground.hide();
+            outer.playground.root.menu.show();
+        });
+    }
+
+    win() {
+        this.game_state = "win";
+
+        let outer = this;
+        setTimeout(function() {
+            outer.add_listening_events();
+        }, 1000);
+    }
+
+    lose() {
+        this.game_state = "lose";
+
+        let outer = this;
+        setTimeout(function() {
+            outer.add_listening_events();
+        }, 1000);
+    }
+
+
+    last_update() {
+        this.render();
+    }
+
+    render() {
+        let length = this.playground.height / 2;
+
+        if (this.game_state === "win") {
+            this.ctx.drawImage(this.win_img, this.playground.width / 2 - length / 2, this.playground.height / 2 - length / 2, length, length);
+        } else if (this.game_state === "lose") {
+            this.ctx.drawImage(this.lose_img, this.playground.width / 2 - length / 2, this.playground.height / 2 - length / 2, length, length);
         }
     }
 }
@@ -966,13 +1041,28 @@ class AcGamePlayground {
         return colors[Math.floor(Math.random() * 5)];
     }
 
+   create_uuid() {
+        let res = "";
+        for (let i = 0; i < 8; i ++ ) {
+            let x = parseInt(Math.floor(Math.random() * 10));  // 返回[0, 1)之间的数
+            res += x;
+        }
+        return res;
+    }
 
     start() {
         let outer = this;
+        let uuid = this.create_uuid();
 
-        $(window).resize(function() {
+        $(window).on(`resize.${uuid}`, function() {
             outer.resize();
         });
+
+        if (this.root.AcWingOS) {
+            this.root.AcWingOS.api.window.on_close(function() {
+                $(window).off(`resize.${uuid}`);
+            });
+        }
     }
 
     resize() {
@@ -1001,6 +1091,7 @@ class AcGamePlayground {
         this.mode = mode;
         this.state = "waiting"; // waiting -> fighting -> over
         this.notice_board = new NoticeBoard(this);
+        this.score_board = new ScoreBoard(this);
         this.player_count = 0;
 
         this.players = [];
@@ -1023,6 +1114,26 @@ class AcGamePlayground {
 
 
     hide() { // 关闭playground界面
+        while (this.players && this.players.length > 0) {
+            this.players[0].destroy();
+        }
+
+        if (this.game_map) {
+            this.game_map.destroy();
+            this.game_map = null;
+        }
+
+        if (this.notice_board) {
+            this.notice_board.destroy();
+            this.notice_board = null;
+        }
+
+        if (this.score_board) {
+            this.score_board.destroy();
+            this.score_board = null;
+        }
+
+        this.$playground.empty(); // 清空playground html
         this.$playground.hide();
     }
 }
@@ -1292,7 +1403,6 @@ class Settings {
             url: "https://app6051.acapp.acwing.com.cn/settings/acwing/acapp/apply_code",
             type: "GET",
             success: function(resp) {
-                console.log("called getinfo_acapp() function");
                 if (resp.result === "success") {
                     outer.acwing_login_acapp(resp.appid, resp.redirect_uri, resp.scope, resp.state);
                 }
@@ -1311,7 +1421,6 @@ class Settings {
             },
             success: function(resp) {
                 if (resp.result === "success") {
-                    console.log("called getinfo_web() function");
                     outer.username = resp.username;
                     outer.photo = resp.photo;
                     outer.hide();
@@ -1336,7 +1445,6 @@ class Settings {
 }
 export class AcGame {
     constructor(id, AcWingOS) {
-        console.log("create a ac game !!!");
         this.id = id;
         this.$ac_game = $('#' + id);
         this.AcWingOS = AcWingOS
