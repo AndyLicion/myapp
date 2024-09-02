@@ -46,7 +46,7 @@ class ChatField {
 
     add_message(username, text) {
         this.show_history();
-        let message = `[${username}]${text}`;
+        let message = `[${username}]: ${text}`;
         this.$history.append(this.render_message(message));
         this.$history.scrollTop(this.$history[0].scrollHeight);
     }

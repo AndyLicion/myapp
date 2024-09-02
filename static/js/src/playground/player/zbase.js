@@ -28,7 +28,7 @@ class Player extends AcGameObject {
         if (this.character !== "robot") {
             this.img = new Image();
             this.img.src = this.photo;
-
+            console.log(this.img);
         }
 
         if (this.character === "me") {
